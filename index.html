@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6f5c">
+<title>Relatório de Plantão</title>
+<style>
+  :root{--bg:#f4f1ea;--card:#fff;--ink:#1d2a26;--muted:#6b7773;--line:#e2ddd2;--accent:#1f6f5c;--wa:#1faa59;--red:#b3412e}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Roboto,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
+  header{background:var(--accent);color:#fff;padding:20px 16px 18px}
+  header h1{margin:0;font-size:22px}
+  header p{margin:4px 0 0;opacity:.85;font-size:14px}
+  main{max-width:640px;margin:0 auto;padding:4px 12px 140px}
+  .alerta{background:#fbeae6;color:#7d2b1d;border-radius:12px;padding:12px 14px;margin:14px 0 0;font-size:14px;font-weight:600}
+  .card{background:var(--card);border-radius:16px;padding:16px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .card h2{margin:0 0 2px;font-size:18px}
+  .card .help{margin:0 0 10px;color:var(--muted);font-size:13px}
+  .field{margin:12px 0}
+  .label{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+  input[type=text],input[type=date],input[type=time],input:not([type]),textarea{width:100%;font:inherit;font-size:17px;padding:11px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);min-width:0}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  textarea{min-height:84px;resize:none;overflow:hidden}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .two .label{font-size:13px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips label{position:relative}
+  .chips input{position:absolute;opacity:0;pointer-events:none}
+  .chips span{display:inline-block;padding:10px 15px;border:1.5px solid var(--line);border-radius:999px;font-size:15px;background:#fff;user-select:none;white-space:nowrap}
+  .chips input:checked+span{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chips input.bad:checked+span{background:var(--red);border-color:var(--red)}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .colhead{display:grid;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:-4px}
+  .vit,.vithead{display:grid;grid-template-columns:84px 1fr 54px 30px;gap:6px;align-items:center}
+  .pa{display:flex;align-items:center;gap:4px}
+  .pa span{color:var(--muted)}
+  .ban{display:grid;grid-template-columns:84px 1fr 30px;gap:8px;align-items:center}
+  .rem{border:1.5px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+  .remtop{display:grid;grid-template-columns:1fr 40px;gap:8px}
+  .rembot{display:grid;grid-template-columns:84px 1fr;gap:8px;align-items:center}
+  input[type=time]{padding:11px 4px;font-size:16px;text-align:center}
+  input[type=time]::-webkit-calendar-picker-indicator{display:none}
+  .card{padding:16px 14px}
+  .ban .chips,.mealrow .chips,.rembot .chips{gap:6px;flex-wrap:nowrap}
+  .ban .chips span,.mealrow .chips span,.rembot .chips span{padding:10px 11px;font-size:14px}
+  .pa input{padding:11px 2px;text-align:center}
+  .vit>input[data-f=fc]{padding:11px 6px;text-align:center}
+  .del{background:none;border:0;color:var(--muted);font-size:26px;line-height:1;padding:0;width:30px;height:44px;border-radius:10px}
+  .add{width:100%;margin-top:10px;background:#eef5f2;color:var(--accent);border:1.5px dashed #b9d6cc;border-radius:12px;padding:13px;font:inherit;font-weight:700;font-size:16px}
+  .soft{margin-top:8px;background:none;border:0;color:var(--accent);font:inherit;font-weight:600;font-size:14px;text-decoration:underline;padding:4px 0}
+  .empty{color:var(--muted);font-size:14px;font-style:italic}
+  .meal{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+  .meal:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  .meal h3{margin:0 0 8px;font-size:16px}
+  .mealrow{display:grid;grid-template-columns:84px 1fr;gap:8px;align-items:start;margin-bottom:8px}
+  .obsgrid{display:grid;gap:10px}
+  .obsgrid>div{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .actions{position:fixed;left:0;right:0;bottom:0;padding:24px 12px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(rgba(244,241,234,0),var(--bg) 35%);z-index:5}
+  .actions .inner{max-width:640px;margin:0 auto;display:flex;gap:10px}
+  button.big{font:inherit;font-weight:700;border:0;border-radius:14px;padding:16px;font-size:17px;cursor:pointer}
+  button:disabled{opacity:.6}
+  .wa{flex:1;background:var(--wa);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px}
+  .sec{background:#fff;color:var(--ink);border:1.5px solid var(--line)!important}
+  .link{display:block;margin:8px auto 0;background:none;border:0;color:var(--muted);font:inherit;font-weight:600;font-size:15px;text-decoration:underline}
+  .modal{position:fixed;inset:0;background:rgba(20,28,26,.94);z-index:10;overflow:auto;padding:12px 12px 120px}
+  .modal[hidden]{display:none}
+  .modal img{width:100%;max-width:640px;display:block;margin:0 auto 12px;border-radius:10px}
+  .aviso{max-width:640px;margin:0 auto 12px;background:#fff6dc;color:#5b4300;border-radius:12px;padding:12px 14px;font-size:15px}
+  .dlgwrap{position:fixed;inset:0;background:rgba(20,28,26,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+  .dlgwrap[hidden]{display:none}
+  .dlg{background:#fff;border-radius:18px;padding:20px 16px 16px;width:100%;max-width:480px}
+  .dlg p{margin:0 0 16px;font-size:17px;font-weight:600}
+  .dlg .inner{display:flex;gap:10px}
+  .dlg .inner button{flex:1}
+  .trava{background:rgba(20,28,26,.85);align-items:center}
+  .dlgsub{font-weight:400!important;font-size:15px!important;color:var(--muted)}
+  .dlg .col{display:flex;flex-direction:column;gap:10px}
+  .fila{background:#fff6dc;color:#5b4300;border-radius:12px;padding:10px 14px;margin:14px 0 0;font-size:14px}
+  .fila button{background:none;border:0;color:#5b4300;font:inherit;font-weight:700;text-decoration:underline;padding:0}
+  .hbtn{width:100%;min-height:54px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 2px;line-height:1.1;cursor:pointer}
+  .hbtn b{font-size:17px}
+  .hbtn{overflow:hidden}
+  .hbtn small{font-size:12px;color:var(--muted);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .hbtn.vazio b{color:#a8b0ad}
+  .hbtn:disabled{background:#f3f1ec;opacity:.5;cursor:default}
+  textarea:disabled{background:#f3f1ec;opacity:.55}
+  .meal.off h3{color:var(--muted)}
+  .req{color:var(--red)}
+  .pk .per{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pkgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .pk button.op{padding:11px 2px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font:inherit;font-size:18px;font-weight:700;color:var(--ink);line-height:1.15}
+  .pk button.op small{display:block;font-size:11px;font-weight:500;color:var(--muted)}
+  .pk button.op.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pk button.op.on small{color:#d6ebe4}
+  .pklab{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 0 6px}
+  .pkhint{color:var(--muted);font-size:14px;font-style:italic;padding:8px 0}
+  .pkprev{text-align:center;font-size:22px;font-weight:800;margin:16px 0 12px;min-height:28px}
+  .pklinks{display:flex;justify-content:space-between;margin-bottom:10px}
+  .pklinks button{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;font-size:15px;text-decoration:underline;padding:6px 0}
+  .pk{max-height:92vh;overflow:auto}
+  .pkbig{display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 16px!important}
+  .pkbig small{font-size:15px;font-weight:600;opacity:.85}
+  .abertura{position:fixed;inset:0;z-index:25;background:var(--bg);overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+  .abin{width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px}
+  .abin h1{margin:0;font-size:28px;color:var(--accent)}
+  .absub{margin:-8px 0 18px;color:var(--muted);font-size:17px}
+  .abbtn{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:20px 16px!important;font-size:19px!important}
+  .abbtn small{font-size:14px;font-weight:500;opacity:.85}
+  @media (max-width:350px){
+    .vit,.vithead{grid-template-columns:76px 1fr 48px 26px;gap:5px}
+    .ban,.rembot,.mealrow{grid-template-columns:76px 1fr}
+    .ban{grid-template-columns:76px 1fr 26px}
+    .pa{gap:2px}
+    .pa input,.vit>input[data-f=fc]{font-size:15px;padding:11px 1px}
+    .del{width:26px}
+  }
+  .toast{position:fixed;left:50%;bottom:100px;transform:translate(-50%,20px);background:#1d2a26;color:#fff;padding:12px 18px;border-radius:12px;font-size:15px;opacity:0;transition:.25s;z-index:20;max-width:90vw;text-align:center;pointer-events:none}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div id="abertura" class="abertura" hidden>
+  <div class="abin">
+    <h1>Relatório de Plantão</h1>
+    <p class="absub">Luiz e Luzia</p>
+    <button type="button" id="abNovo" class="big wa abbtn">Começar novo formulário<small>apaga os campos e começa do zero</small></button>
+    <div id="abContinuarWrap" hidden>
+      <button type="button" id="abContinuar" class="big sec abbtn">Continuar formulário em andamento<small id="abResumo"></small></button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>Relatório de Plantão</h1>
+  <p>Luiz e Luzia · um relatório por paciente, a cada plantão</p>
+</header>
+
+<main>
+  <div class="alerta">Em caso de queda, dor forte, falta de ar, confusão ou pressão muito alta ou muito baixa: avise a família imediatamente, antes de anotar.</div>
+
+  <div id="filaStatus" class="fila" hidden><span id="filaTxt"></span> <button type="button" id="filaBtn">Tentar agora</button></div>
+
+  <form id="f" autocomplete="off" onsubmit="return false">
+    <section class="card" id="cab">
+      <h2>Plantão</h2>
+      <div class="field"><span class="label">Paciente</span><div id="cPaciente"></div></div>
+      <div class="field"><span class="label">Cuidadora</span><div id="cCuidadora"></div>
+        <div id="outraWrap" hidden style="margin-top:8px"><input type="text" name="cuidadora_outra" placeholder="Nome da cuidadora"></div>
+      </div>
+      <div class="field"><label class="label" for="data">Data</label><input type="date" id="data" name="data"></div>
+      <div class="field"><span class="label">Turno</span><div id="cTurno"></div></div>
+      <div class="two">
+        <div><span class="label">Começou às <span class="req">*</span></span><span id="hInicio"></span></div>
+        <div><span class="label">Terminou às <span class="req">*</span></span><span id="hFim"></span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Pressão e frequência cardíaca</h2>
+      <p class="help">Uma linha para cada medição. PA com os dois números (ex.: 120 x 70), FC em batimentos por minuto.</p>
+      <div class="vithead colhead"><span>Hora</span><span>PA</span><span>FC</span><span></span></div>
+      <div class="list" id="vitais" style="margin-top:10px"></div>
+      <button type="button" class="add" data-add="vitais">+ Adicionar medição</button>
+    </section>
+
+    <section class="card">
+      <h2>Banheiro</h2>
+      <p class="help">Uma linha para cada ida. Marque se urinou, evacuou ou os dois.</p>
+      <div class="list" id="banheiro"></div>
+      <button type="button" class="add" data-add="banheiro">+ Adicionar ida ao banheiro</button>
+    </section>
+
+    <section class="card">
+      <h2>Remédios</h2>
+      <p class="help">Um remédio por linha, com o horário. Se não tomou, escreva o motivo.</p>
+      <div class="list" id="remedios"></div>
+      <button type="button" class="add" data-add="remedios">+ Adicionar remédio</button>
+      <button type="button" class="soft" id="btnUltimos" hidden></button>
+      <datalist id="medlist"></datalist>
+    </section>
+
+    <section class="card">
+      <h2>Refeições</h2>
+      <p class="help">Horário, aceitação e o que foi servido, incluindo líquidos e remédio dado junto.</p>
+      <div id="refeicoes"></div>
+    </section>
+
+    <section class="card">
+      <h2>Observações do plantão</h2>
+      <div class="obsgrid" id="obsgrid"></div>
+      <div class="field">
+        <label class="label" for="comentarios">Comentários</label>
+        <textarea id="comentarios" name="comentarios" placeholder="Humor, sono, horário que levantou e deitou, passeios, visitas, ocorrências, recados para a família…"></textarea>
+      </div>
+      <div class="field"><span class="label">Plantão passado para</span><div id="cPassado"></div>
+        <div id="passadoWrap" hidden style="margin-top:8px"><input type="text" name="passado_outra" placeholder="Nome"></div>
+      </div>
+    </section>
+
+    <button type="button" id="btnLimpar" class="link">Limpar formulário</button>
+  </form>
+</main>
+
+<div class="actions">
+  <div class="inner">
+    <button type="button" id="btnPrevia" class="big sec">Prévia</button>
+    <button type="button" id="btnShare" class="big wa">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+      Compartilhar no WhatsApp
+    </button>
+  </div>
+</div>
+
+<div id="previa" class="modal" hidden>
+  <div id="previaImgs"></div>
+  <div class="actions">
+    <div class="inner">
+      <button type="button" id="fecharPrevia" class="big sec">Voltar</button>
+      <button type="button" id="sharePrevia" class="big wa">Compartilhar no WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<div id="dlg" class="dlgwrap" hidden>
+  <div class="dlg"><p id="dlgMsg"></p>
+    <div class="inner"><button type="button" id="dlgNao" class="big sec"></button><button type="button" id="dlgSim" class="big wa"></button></div>
+  </div>
+</div>
+
+<div id="trava" class="dlgwrap trava" hidden>
+  <div class="dlg">
+    <div id="travaPergunta">
+      <p>O relatório foi enviado no grupo do WhatsApp?</p>
+      <p class="dlgsub">Confirme só depois de ver as imagens no grupo. Ao confirmar, os dados vão para a planilha e o formulário é apagado para o próximo plantão.</p>
+      <div class="col"><button type="button" id="travaSim" class="big wa">Sim, foi enviado</button>
+        <button type="button" id="travaNao" class="big sec">Não, voltar ao formulário</button></div>
+    </div>
+    <div id="travaSalvando" hidden><p>Salvando na planilha…</p></div>
+    <div id="travaFim" hidden>
+      <p id="travaFimMsg"></p>
+      <div class="col"><button type="button" id="travaOk" class="big wa">Começar novo relatório</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="picker" class="dlgwrap" hidden>
+  <div class="dlg pk">
+    <div id="pkInicio">
+      <p style="margin:0 0 4px">Qual é a hora?</p>
+      <p class="dlgsub" id="pkAtual" style="margin:0 0 14px"></p>
+      <div class="col">
+        <button type="button" id="pkAgora" class="big wa pkbig">Usar a hora de agora<small id="pkAgoraTxt"></small></button>
+        <button type="button" id="pkOutra" class="big sec pkbig">Escolher outro horário<small>manhã, tarde ou noite</small></button>
+        <button type="button" id="pkCancelar0" class="link" style="margin-top:4px">Cancelar</button>
+        <button type="button" id="pkApagar" class="link" hidden>Apagar hora</button>
+      </div>
+    </div>
+    <div id="pkManual" hidden>
+      <p style="margin:0 0 10px">Escolha o horário</p>
+      <div class="per" id="pkPer"></div>
+      <div class="pklab">Hora</div><div id="pkHoras"></div>
+      <div class="pklab">Minutos</div><div id="pkMin"></div>
+      <div class="pkprev" id="pkPrev"></div>
+      <div class="inner"><button type="button" id="pkVoltar" class="big sec">Voltar</button><button type="button" id="pkOk" class="big wa">Confirmar</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============ CONFIGURAÇÃO ============ */
+const CUIDADORAS = ['Ana Paula', 'Inajara', 'Solange', 'Fabiana'];
+const PACIENTES  = ['Luiz', 'Luzia'];
+const TURNOS     = ['Dia', 'Noite'];
+const REFEICOES  = [['cafe','Café da manhã'],['almoco','Almoço'],['tarde','Café da tarde'],['jantar','Jantar'],['ceia','Ceia / lanche']];
+const ACEITACAO  = ['Não ofertado', 'Comeu tudo', 'Comeu parte', 'Recusou'];
+const OCORRENCIAS = [['quedas','Quedas'],['dor','Dor'],['alteracoes','Alterações'],['beber','Saiu para beber','Luiz']]; // 3º item: só para esse paciente
+/* Planilha: Report-Luiz-Luzia (1goeBGVUQNyVkgBWN7DN11t40feAiDWUbx9QF4KYD5vg)
+   Cole entre as aspas o URL do "App da Web" do Apps Script, terminado em /exec (veja LEIA-ME).
+   Enquanto estiver vazio, o site funciona mas não grava na planilha. */
+const PLANILHA_URL = 'https://script.google.com/macros/s/AKfycbxBEbtFJXOP2oha03mbysJNgH5y503M310PmU7cU4jkUgZNpNQR-viP0z7mWmK9zO6i/exec';
+/* ===================================== */
+
+const form = document.getElementById('f');
+const KEY = 'plantao-rascunho-v2';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let uid = 0;
+
+function chips(name, opts, attrs = '', badVals = []) {
+  return `<div class="chips">${opts.map(o =>
+    `<label><input type="radio" name="${name}" value="${esc(o)}" ${attrs} ${badVals.includes(o) ? 'class="bad"' : ''}><span>${esc(o)}</span></label>`).join('')}</div>`;
+}
+const pad2 = n => String(n).padStart(2, '0');
+function partesHora(v) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); if (!m) return null;
+  const h = +m[1], h12 = h % 12 === 0 ? 12 : h % 12;
+  const suf = h === 0 ? 'meia-noite' : h === 12 ? 'meio-dia' : h < 12 ? 'da manhã' : h <= 18 ? 'da tarde' : 'da noite';
+  return { hh: `${pad2(h12)}:${m[2]}`, suf };
+}
+const fmtHora = v => { const p = partesHora(v); return p ? (p.suf === 'meio-dia' || p.suf === 'meia-noite' ? `${p.hh} (${p.suf})` : `${p.hh} ${p.suf}`) : ''; };
+const horaLabel = v => { const p = partesHora(v); return p ? `<b>${p.hh}</b><small>${p.suf}</small>` : `<b>--:--</b><small>escolher</small>`; };
+const horaHTML = (attrs, v) => `<span class="hwrap"><input type="hidden" ${attrs} value="${esc(v || '')}"><button type="button" class="hbtn${v ? '' : ' vazio'}">${horaLabel(v)}</button></span>`;
+function refreshHoras(root = document) {
+  root.querySelectorAll('.hwrap').forEach(w => { const v = w.firstElementChild.value, b = w.lastElementChild; b.innerHTML = horaLabel(v); b.classList.toggle('vazio', !v); });
+}
+function agora() { const n = new Date(); return `${pad2(n.getHours())}:${pad2(n.getMinutes())}`; }
+const hoje  = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; };
+
+/* ---------- Montagem dos campos fixos ---------- */
+$('cPaciente').innerHTML  = chips('paciente', PACIENTES);
+$('cCuidadora').innerHTML = chips('cuidadora', [...CUIDADORAS, 'Outra']);
+$('cTurno').innerHTML     = chips('turno', TURNOS);
+$('cPassado').innerHTML   = chips('passado', [...CUIDADORAS, 'Outra']);
+$('hInicio').innerHTML = horaHTML('name="inicio"');
+$('hFim').innerHTML = horaHTML('name="fim"');
+$('refeicoes').innerHTML  = REFEICOES.map(([k, l]) => `
+  <div class="meal" data-meal="${k}"><h3>${l}</h3>
+    ${chips(`ref_${k}_aceit`, ACEITACAO, 'data-nodesel="1"', ['Recusou'])}
+    <div class="mealrow" style="margin-top:8px">${horaHTML(`name="ref_${k}_hora"`)}
+      <textarea name="ref_${k}_desc" placeholder="O que foi servido" style="min-height:54px"></textarea></div>
+  </div>`).join('');
+$('obsgrid').innerHTML = OCORRENCIAS.map(([k, l, so]) =>
+  `<div ${so ? `data-so="${so}"` : ''}><span class="label" style="margin:0">${l}</span>${chips(`oc_${k}`, ['Não', 'Sim'], '', ['Sim'])}</div>`).join('');
+
+document.querySelectorAll('[name^="ref_"][value="Não ofertado"]').forEach(x => { x.defaultChecked = true; x.checked = true; x.dataset.was = '1'; });
+
+/* ---------- Linhas dinâmicas ---------- */
+const ROWS = {
+  vitais: (v = {}) => `<div class="vit" data-row>
+      ${horaHTML('data-f="hora"', v.hora)}
+      <div class="pa"><input data-f="pas" inputmode="numeric" placeholder="120" value="${esc(v.pas)}" aria-label="PA máxima"><span>x</span><input data-f="pad" inputmode="numeric" placeholder="70" value="${esc(v.pad)}" aria-label="PA mínima"></div>
+      <input data-f="fc" inputmode="numeric" placeholder="78" value="${esc(v.fc)}" aria-label="FC">
+      <button type="button" class="del" aria-label="Remover">×</button></div>`,
+  banheiro: (v = {}) => { const n = 'b' + (++uid); return `<div class="ban" data-row>
+      ${horaHTML('data-f="hora"', v.hora)}
+      <div class="chips">
+        <label><input type="checkbox" data-f="u" ${v.u ? 'checked' : ''}><span>Urinou</span></label>
+        <label><input type="checkbox" data-f="e" ${v.e ? 'checked' : ''}><span>Evacuou</span></label>
+      </div>
+      <button type="button" class="del" aria-label="Remover">×</button></div>`; },
+  remedios: (v = {}) => { const n = 'r' + (++uid); return `<div class="rem" data-row>
+      <div class="remtop"><input data-f="nome" list="medlist" placeholder="Nome do remédio" value="${esc(v.nome)}">
+        <button type="button" class="del" aria-label="Remover">×</button></div>
+      <div class="rembot">${horaHTML('data-f="hora"', v.hora)}
+        <div class="chips">${['Tomou', 'Não tomou'].map(o =>
+          `<label><input type="radio" name="${n}" data-f="tomou" value="${o}" ${v.tomou === o ? 'checked data-was="1"' : ''} ${o === 'Não tomou' ? 'class="bad"' : ''}><span>${o}</span></label>`).join('')}</div></div>
+      <input data-f="motivo" placeholder="Se não tomou, motivo / observação" value="${esc(v.motivo)}">
+    </div>`; },
+};
+const EMPTY = { vitais: 'Nenhuma medição ainda.', banheiro: 'Nenhuma ida registrada ainda.', remedios: 'Nenhum remédio registrado ainda.' };
+
+function addRow(kind, v, focus) {
+  const box = $(kind);
+  box.querySelector('.empty')?.remove();
+  box.insertAdjacentHTML('beforeend', ROWS[kind](v));
+  const row = box.lastElementChild;
+  if (focus) {
+    const first = row.querySelector(kind === 'remedios' ? '[data-f=nome]' : '[data-f=pas], [data-f=u]');
+    if (first && first.type !== 'checkbox') first.focus();
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  return row;
+}
+function checkEmpty(kind) {
+  const box = $(kind);
+  if (!box.querySelector('[data-row]') && !box.querySelector('.empty'))
+    box.insertAdjacentHTML('beforeend', `<div class="empty">${EMPTY[kind]}</div>`);
+}
+function readRow(row) {
+  const o = {};
+  row.querySelectorAll('[data-f]').forEach(el => {
+    const k = el.dataset.f;
+    if (el.type === 'checkbox') o[k] = el.checked;
+    else if (el.type === 'radio') { if (!(k in o)) o[k] = ''; if (el.checked) o[k] = el.value; }
+    else o[k] = el.value.trim();
+  });
+  return o;
+}
+const rowHasData = o => Object.entries(o).some(([k, v]) => k !== 'hora' && v);
+const readList = kind => [...$(kind).querySelectorAll('[data-row]')].map(readRow);
+
+document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+  const k = b.dataset.add;
+  addRow(k, { hora: agora() }, true);
+  salvar();
+});
+form.addEventListener('click', e => {
+  const del = e.target.closest('.del');
+  if (del) {
+    const row = del.closest('[data-row]'), kind = row.parentElement.id;
+    const remover = () => { row.remove(); checkEmpty(kind); salvar(); };
+    if (rowHasData(readRow(row))) perguntar('Remover esta linha?', 'Remover').then(ok => ok && remover());
+    else remover();
+    return;
+  }
+  const hb = e.target.closest('.hbtn');
+  if (hb) { abrirPicker(hb.previousElementSibling); return; }
+  const r = e.target;
+  if (r.type === 'radio') {           // tocar de novo numa opção marcada desmarca
+    if (r.dataset.was === '1' && !r.dataset.nodesel) { r.checked = false; r.dataset.was = ''; }
+    else { form.querySelectorAll(`input[name="${r.name}"]`).forEach(x => x.dataset.was = ''); r.dataset.was = '1'; }
+    atualizarOutra(); salvar();
+  }
+});
+
+/* ---------- Seletor de hora (Manhã / Tarde / Noite) ---------- */
+const PERIODOS = {
+  'Manhã': { sub: 'madrugada até meio-dia', horas: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  'Tarde': { sub: '1 às 6 da tarde',        horas: [1,2,3,4,5,6] },
+  'Noite': { sub: '7 até meia-noite',       horas: [7,8,9,10,11,12] },
+};
+const para24 = (per, h) => per === 'Manhã' ? (h === 12 ? 12 : h) : per === 'Tarde' ? h + 12 : (h === 12 ? 0 : h + 12);
+const de24 = H => H === 0 ? ['Noite', 12] : H <= 12 ? ['Manhã', H] : H <= 18 ? ['Tarde', H - 12] : ['Noite', H - 12];
+const pk = { alvo: null, per: '', h: 0, m: -1 };
+function pkDe(v) {
+  const x = /^(\d{1,2}):(\d{2})$/.exec(v || '');
+  if (!x) { pk.per = ''; pk.h = 0; pk.m = -1; return; }
+  [pk.per, pk.h] = de24(+x[1]); pk.m = +x[2];
+}
+const pkValor = () => pk.per && pk.h && pk.m >= 0 ? `${pad2(para24(pk.per, pk.h))}:${pad2(pk.m)}` : '';
+function pkRender() {
+  $('pkPer').innerHTML = Object.entries(PERIODOS).map(([p, o]) =>
+    `<button type="button" class="op${pk.per === p ? ' on' : ''}" data-per="${p}">${p}<small>${o.sub}</small></button>`).join('');
+  $('pkHoras').innerHTML = pk.per
+    ? `<div class="pkgrid">${PERIODOS[pk.per].horas.map(h => {
+        const extra = h === 12 ? `<small>${pk.per === 'Manhã' ? 'meio-dia' : 'meia-noite'}</small>` : '';
+        return `<button type="button" class="op${pk.h === h ? ' on' : ''}" data-h="${h}">${h}${extra}</button>`; }).join('')}</div>`
+    : '<div class="pkhint">Escolha primeiro: manhã, tarde ou noite.</div>';
+  $('pkMin').innerHTML = pk.per && pk.h
+    ? `<div class="pkgrid">${Array.from({ length: 12 }, (_, i) => i * 5).map(m =>
+        `<button type="button" class="op${pk.m === m ? ' on' : ''}" data-m="${m}">${pad2(m)}</button>`).join('')}</div>`
+    : `<div class="pkhint">${pk.per ? 'Agora escolha a hora.' : 'Depois de escolher a hora.'}</div>`;
+  const v = pkValor();
+  $('pkPrev').textContent = v ? fmtHora(v) : '';
+  $('pkOk').disabled = !v;
+}
+function abrirPicker(input) {
+  pk.alvo = input;
+  $('pkAgoraTxt').textContent = fmtHora(agora());
+  $('pkAtual').textContent = input.value ? 'Hora marcada: ' + fmtHora(input.value) : '';
+  $('pkApagar').hidden = !input.value;
+  $('pkInicio').hidden = false; $('pkManual').hidden = true;
+  $('picker').hidden = false;
+}
+function fecharPicker(valor) {
+  if (valor !== undefined && pk.alvo) {
+    pk.alvo.value = valor;
+    refreshHoras(pk.alvo.parentElement.parentElement);
+    pk.alvo.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  $('picker').hidden = true; pk.alvo = null;
+}
+$('picker').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.per) { if (pk.per !== b.dataset.per) { pk.per = b.dataset.per; pk.h = 0; pk.m = -1; } }
+  else if (b.dataset.h) { if (pk.h !== +b.dataset.h) { pk.h = +b.dataset.h; pk.m = -1; } }
+  else if (b.dataset.m) { pk.m = +b.dataset.m; }
+  else if (b.id === 'pkAgora') return fecharPicker(agora());
+  else if (b.id === 'pkOutra') { pkDe(pk.alvo.value); $('pkInicio').hidden = true; $('pkManual').hidden = false; }
+  else if (b.id === 'pkVoltar') { $('pkManual').hidden = true; $('pkInicio').hidden = false; return; }
+  else if (b.id === 'pkApagar') return fecharPicker('');
+  else if (b.id === 'pkCancelar0') return fecharPicker();
+  else if (b.id === 'pkOk') return fecharPicker(pkValor());
+  pkRender();
+});
+
+/* ---------- Refeições travadas até ser ofertada; "Saiu para beber" só do Luiz ---------- */
+function atualizarCondicionais() {
+  document.querySelectorAll('[data-meal]').forEach(m => {
+    const v = m.querySelector('input[type=radio]:checked')?.value;
+    const on = !!v && v !== 'Não ofertado';
+    m.classList.toggle('off', !on);
+    m.querySelector('.hbtn').disabled = !on;
+    m.querySelector('textarea').disabled = !on;
+  });
+  const pac = form.querySelector('[name=paciente]:checked')?.value;
+  document.querySelectorAll('[data-so]').forEach(el => el.hidden = el.dataset.so !== pac);
+}
+
+/* ---------- Remédios: lista do último plantão + autocompletar ---------- */
+function memRemedios() { try { return JSON.parse(localStorage.getItem('plantao-remedios') || '{}'); } catch (e) { return {}; } }
+function lembrarRemedios(paciente, lista) {
+  const meds = lista.filter(r => r.nome).map(r => ({ nome: r.nome, hora: r.hora }));
+  if (!paciente || !meds.length) return;
+  try { const m = memRemedios(); m[paciente] = meds; localStorage.setItem('plantao-remedios', JSON.stringify(m)); } catch (e) {}
+}
+function atualizarUltimos() {
+  const m = memRemedios(), p = form.querySelector('[name=paciente]:checked')?.value;
+  const nomes = [...new Set(Object.values(m).flat().map(r => r.nome))].sort();
+  $('medlist').innerHTML = nomes.map(n => `<option value="${esc(n)}">`).join('');
+  const b = $('btnUltimos'), lista = p && m[p];
+  b.hidden = !(lista && lista.length && !$('remedios').querySelector('[data-row]'));
+  if (!b.hidden) b.textContent = `Usar a lista de remédios do último plantão de ${p} (${lista.length})`;
+}
+$('btnUltimos').onclick = () => {
+  const p = form.querySelector('[name=paciente]:checked')?.value;
+  (memRemedios()[p] || []).forEach(r => addRow('remedios', { nome: r.nome, hora: r.hora }));
+  atualizarUltimos(); salvar();
+};
+
+/* ---------- Utilidades ---------- */
+function atualizarOutra() {
+  $('outraWrap').hidden   = form.querySelector('[name=cuidadora]:checked')?.value !== 'Outra';
+  $('passadoWrap').hidden = form.querySelector('[name=passado]:checked')?.value !== 'Outra';
+  atualizarUltimos();
+  atualizarCondicionais();
+}
+function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 3) + 'px'; }
+let tt;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 3500); }
+
+/* ---------- Coleta ---------- */
+function coletar() {
+  const d = { campos: {} };
+  form.querySelectorAll('[name]').forEach(el => {
+    if (el.dataset.f) return;
+    if (el.type === 'radio') { if (!(el.name in d.campos)) d.campos[el.name] = ''; if (el.checked) d.campos[el.name] = el.value; }
+    else d.campos[el.name] = el.value.trim();
+  });
+  d.vitais = readList('vitais'); d.banheiro = readList('banheiro'); d.remedios = readList('remedios');
+  return d;
+}
+
+/* ---------- Rascunho automático ---------- */
+function salvar() { try { localStorage.setItem(KEY, JSON.stringify(coletar())); } catch (e) {} }
+function restaurar() {
+  let d = null; try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (d) {
+    for (const [k, v] of Object.entries(d.campos || {}))
+      form.querySelectorAll(`[name="${k}"]`).forEach(el => {
+        if (el.type === 'radio') { el.checked = el.value === v; el.dataset.was = el.checked ? '1' : ''; } else el.value = v;
+      });
+    for (const k of ['vitais', 'banheiro', 'remedios']) (d[k] || []).forEach(v => addRow(k, v));
+  }
+  if (!$('data').value) $('data').value = hoje();
+  ['vitais', 'banheiro', 'remedios'].forEach(checkEmpty);
+  form.querySelectorAll('[name^="ref_"][type=radio]').forEach(x => x.dataset.was = x.checked ? '1' : '');
+  refreshHoras();
+  form.querySelectorAll('textarea').forEach(autosize);
+  atualizarOutra();
+}
+function limpar() {
+  form.reset();
+  form.querySelectorAll('input[type=hidden]').forEach(h => h.value = '');
+  form.querySelectorAll('input[type=radio]').forEach(r => r.dataset.was = r.checked ? '1' : '');
+  refreshHoras();
+  ['vitais', 'banheiro', 'remedios'].forEach(k => { $(k).innerHTML = ''; checkEmpty(k); });
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  $('data').value = hoje();
+  form.querySelectorAll('textarea').forEach(autosize);
+  atualizarOutra();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+form.addEventListener('input', e => { if (e.target.tagName === 'TEXTAREA') autosize(e.target); salvar(); });
+form.addEventListener('change', () => { atualizarOutra(); salvar(); });
+
+/* ---------- Normalização para a imagem ---------- */
+function preparar() {
+  const d = coletar(), c = d.campos;
+  const r = {
+    paciente: c.paciente, turno: c.turno, data: c.data, inicio: c.inicio, fim: c.fim,
+    cuidadora: c.cuidadora === 'Outra' ? c.cuidadora_outra : c.cuidadora,
+    passado: c.passado === 'Outra' ? c.passado_outra : c.passado,
+    vitais: d.vitais.filter(v => v.pas || v.pad || v.fc),
+    banheiro: d.banheiro.filter(v => v.u || v.e || v.hora),
+    remedios: d.remedios.filter(v => v.nome || v.tomou || v.motivo),
+    refeicoes: REFEICOES.map(([k, l]) => ({ k, nome: l, hora: c[`ref_${k}_hora`], aceit: c[`ref_${k}_aceit`], desc: c[`ref_${k}_desc`] }))
+                        .filter(m => m.aceit && m.aceit !== 'Não ofertado'),
+    naoOfertadas: REFEICOES.filter(([k]) => !c[`ref_${k}_aceit`] || c[`ref_${k}_aceit`] === 'Não ofertado').map(([, l]) => l),
+    ocorr: OCORRENCIAS.filter(([, , so]) => !so || so === c.paciente).map(([k, l]) => ({ nome: l, v: c[`oc_${k}`] })),
+    comentarios: c.comentarios,
+    _rawRemedios: d.remedios,
+  };
+  if (r.data) {
+    const [y, m, dd] = r.data.split('-').map(Number);
+    const s = new Date(y, m - 1, dd).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    r.dataTxt = s.charAt(0).toUpperCase() + s.slice(1);
+    r.dataCurta = `${String(dd).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  }
+  r.gerado = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return r;
+}
+function validar(r) {
+  const falta = [];
+  if (!r.paciente) falta.push('paciente');
+  if (!r.cuidadora) falta.push('cuidadora');
+  if (!r.data) falta.push('data');
+  if (!r.turno) falta.push('turno');
+  if (!r.inicio) falta.push('hora que começou');
+  if (!r.fim) falta.push('hora que terminou');
+  if (falta.length) { toast('Preencha: ' + falta.join(', ')); $('cab').scrollIntoView({ behavior: 'smooth' }); return false; }
+  const ref = r.refeicoes.find(m => !m.hora || !m.desc);
+  if (ref) {
+    toast(`${ref.nome}: preencha ${!ref.hora && !ref.desc ? 'a hora e o que foi servido' : !ref.hora ? 'a hora' : 'o que foi servido'}`);
+    document.querySelector(`[data-meal="${ref.k}"]`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  return true;
+}
+
+/* ---------- Desenho da imagem (canvas, em páginas) ---------- */
+const W = 1080, M = 60, CW = W - 2 * M, PAGE_MAX = 1920, FOOT = 90;
+const FONT = 'system-ui,-apple-system,Roboto,"Segoe UI",Arial,sans-serif';
+const C = { ink: '#1d2a26', muted: '#6b7773', light: '#a8b0ad', line: '#e6e1d6', red: '#b3412e', amber: '#a86a12', ok: '#1f6f5c', head: '#1f6f5c', zebra: '#f6f4ef' };
+
+function makeLayout(ctx, r) {
+  const font = (w, s) => ctx.font = `${w} ${s}px ${FONT}`;
+  const wrap = (t, max) => {
+    const out = [];
+    for (const para of String(t).split('\n')) {
+      let line = '';
+      for (const w of para.split(/\s+/).filter(Boolean)) {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > max && line) { out.push(line); line = w; } else line = test;
+      }
+      out.push(line);
+    }
+    return out;
+  };
+  const T = (t, x, y, cor, align = 'left') => { ctx.fillStyle = cor; ctx.textAlign = align; ctx.fillText(t, x, y); };
+  const B = [];
+  const add = (h, draw, keep = false) => B.push({ h, draw, keep });
+  const sep = () => add(2, (y) => { ctx.fillStyle = C.line; ctx.fillRect(M, y, CW, 2); });
+  const section = (t, extra) => add(92, (y) => {
+    ctx.fillStyle = C.head; ctx.fillRect(M, y + 30, 8, 40);
+    font(800, 30); T(t.toUpperCase(), M + 24, y + 62, C.head);
+    if (extra) { font(500, 26); T(extra, M + CW, y + 62, C.muted, 'right'); }
+  }, true);
+  const textLines = (txt, size = 30, cor = C.ink, indent = 0, weight = 400) => {
+    font(weight, size);
+    for (const l of wrap(txt, CW - indent)) add(Math.round(size * 1.42), (y) => { font(weight, size); T(l, M + indent, y + size * 1.08, cor); });
+  };
+  const nota = t => add(56, (y) => { font('italic 400', 28); T(t, M, y + 38, C.light); });
+
+  // Alertas no topo
+  const alertas = [];
+  const ALERTA_OC = { 'Quedas': 'Teve queda', 'Dor': 'Teve dor', 'Alterações': 'Teve alteração', 'Saiu para beber': 'Saiu para beber' };
+  r.ocorr.forEach(o => { if (o.v === 'Sim') alertas.push(ALERTA_OC[o.nome] || o.nome); });
+  const naoTomou = r.remedios.filter(x => x.tomou === 'Não tomou').length;
+  if (naoTomou) alertas.push(naoTomou === 1 ? '1 remédio não tomado' : `${naoTomou} remédios não tomados`);
+  r.refeicoes.filter(m => m.aceit === 'Recusou').forEach(m => alertas.push(`Recusou ${m.nome.toLowerCase()}`));
+  if (alertas.length) {
+    font(700, 30);
+    const lines = wrap('Atenção: ' + alertas.join(' · '), CW - 56);
+    add(lines.length * 44 + 48 + 20, (y) => {
+      ctx.fillStyle = '#fbeae6'; rr(ctx, M, y + 20, CW, lines.length * 44 + 40, 18); ctx.fill();
+      font(700, 30); lines.forEach((l, i) => T(l, M + 28, y + 20 + 50 + i * 44, '#8a2e1f'));
+    });
+  }
+
+  // Pressão e FC
+  section('Pressão e frequência cardíaca', r.vitais.length ? `${r.vitais.length} medições` : '');
+  if (!r.vitais.length) nota('Nenhuma medição registrada');
+  else {
+    const cx = [M + 24, M + 340, M + 700];
+    add(50, (y) => { font(700, 24); ['HORA', 'PA (mmHg)', 'FC (bpm)'].forEach((h, i) => T(h, cx[i], y + 34, C.muted)); });
+    r.vitais.forEach((v, i) => add(66, (y) => {
+      if (i % 2 === 0) { ctx.fillStyle = C.zebra; rr(ctx, M, y + 4, CW, 60, 10); ctx.fill(); }
+      font(700, 30); T(fmtHora(v.hora) || '—', cx[0], y + 46, v.hora ? C.ink : C.light);
+      font(700, 34); T(v.pas || v.pad ? `${v.pas || '?'} x ${v.pad || '?'}` : '—', cx[1], y + 46, v.pas || v.pad ? C.ink : C.light);
+      T(v.fc || '—', cx[2], y + 46, v.fc ? C.ink : C.light);
+    }));
+  }
+
+  // Banheiro
+  const nu = r.banheiro.filter(b => b.u).length, ne = r.banheiro.filter(b => b.e).length;
+  section('Banheiro', r.banheiro.length ? `urinou ${nu}x · evacuou ${ne}x` : '');
+  if (!r.banheiro.length) nota('Nenhuma ida registrada');
+  else r.banheiro.forEach((b, i) => add(62, (y) => {
+    if (i % 2 === 0) { ctx.fillStyle = C.zebra; rr(ctx, M, y + 4, CW, 56, 10); ctx.fill(); }
+    font(700, 30); T(fmtHora(b.hora) || '—', M + 24, y + 43, b.hora ? C.ink : C.light);
+    const t = b.u && b.e ? 'Urinou e evacuou' : b.u ? 'Urinou' : b.e ? 'Evacuou' : 'Banheiro';
+    font(600, 30); T(t, M + 380, y + 43, b.e ? C.ok : C.ink);
+  }));
+
+  // Remédios
+  const nt = r.remedios.filter(x => x.tomou === 'Tomou').length;
+  section('Remédios', r.remedios.length ? `${nt} de ${r.remedios.length} tomados` : '');
+  if (!r.remedios.length) nota('Nenhum remédio registrado');
+  else r.remedios.forEach((m, i) => {
+    font(700, 32); const nomeL = wrap(m.nome || '(sem nome)', CW - 240);
+    font('italic 400', 27); const motL = m.motivo ? wrap(m.motivo, CW) : [];
+    const h = 20 + nomeL.length * 44 + 38 + motL.length * 38 + 18;
+    add(h, (y) => {
+      font(700, 32); nomeL.forEach((l, k) => T(l, M, y + 52 + k * 44, m.nome ? C.ink : C.light));
+      const cor = m.tomou === 'Não tomou' ? C.red : m.tomou ? C.ok : C.light;
+      font(800, 30); T(m.tomou || 'não marcado', M + CW, y + 52, cor, 'right');
+      const yh = y + 52 + nomeL.length * 44 - 4;
+      font(500, 27); T(m.hora ? fmtHora(m.hora) : 'sem horário', M, yh, C.muted);
+      font('italic 400', 27); motL.forEach((l, k) => T(l, M, yh + 38 + k * 38, C.muted));
+      if (i < r.remedios.length - 1) { ctx.fillStyle = C.line; ctx.fillRect(M, y + h - 2, CW, 2); }
+    });
+  });
+
+  // Refeições
+  section('Refeições');
+  if (!r.refeicoes.length) nota('Nenhuma refeição ofertada');
+  else r.refeicoes.forEach((m, i) => {
+    add(60, (y) => {
+      font(800, 32); T(m.nome, M, y + 46, C.ink);
+      const w = ctx.measureText(m.nome).width;
+      if (m.hora) { font(500, 30); T('· ' + fmtHora(m.hora), M + w + 14, y + 46, C.muted); }
+      if (m.aceit) {
+        font(800, 30); T(m.aceit, M + CW, y + 46, m.aceit === 'Recusou' ? C.red : m.aceit === 'Comeu parte' ? C.amber : C.ok, 'right');
+      }
+    }, !!m.desc);
+    if (m.desc) textLines(m.desc, 30, '#34403c');
+    if (i < r.refeicoes.length - 1) { add(18, () => {}); sep(); add(6, () => {}); }
+  });
+  if (r.refeicoes.length && r.naoOfertadas.length) {
+    add(14, () => {});
+    font('italic 400', 27);
+    for (const l of wrap('Não ofertado: ' + r.naoOfertadas.join(', '), CW))
+      add(40, (y) => { font('italic 400', 27); T(l, M, y + 30, C.muted); });
+  }
+
+  // Observações
+  section('Observações do plantão');
+  for (let i = 0; i < r.ocorr.length; i += 2) {
+    const par = r.ocorr.slice(i, i + 2);
+    add(54, (y) => par.forEach((o, j) => {
+      let x = M + j * (CW / 2);
+      font(500, 30); T(o.nome + ': ', x, y + 40, C.ink); x += ctx.measureText(o.nome + ': ').width;
+      font(800, 30); T(o.v || '—', x, y + 40, o.v === 'Sim' ? C.red : o.v ? C.ink : C.light);
+    }));
+  }
+  if (r.comentarios) { add(12, () => {}); textLines(r.comentarios, 30, C.ink); }
+  if (r.passado) { add(20, () => {}); sep(); add(64, (y) => { font(500, 30); T('Plantão passado para: ', M, y + 46, C.muted); const w = ctx.measureText('Plantão passado para: ').width; font(800, 30); T(r.passado, M + w, y + 46, C.ink); }); }
+
+  return { blocks: B, T, font };
+}
+
+function rr(ctx, x, y, w, h, rad) {
+  ctx.beginPath(); ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad); ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad); ctx.arcTo(x, y, x + w, y, rad); ctx.closePath();
+}
+
+function gerarPaginas(r) {
+  const meas = document.createElement('canvas').getContext('2d');
+  const { blocks } = makeLayout(meas, r);
+  const HEAD1 = 380, HEADN = 160;
+  // pagina os blocos
+  const pages = [[]]; let used = 0;
+  blocks.forEach((b, i) => {
+    const avail = PAGE_MAX - (pages.length === 1 ? HEAD1 : HEADN) - FOOT;
+    let need = b.h, j = i;
+    while (blocks[j].keep && blocks[j + 1]) { j++; need += blocks[j].h; }
+    if (used + need > avail && pages[pages.length - 1].length) { pages.push([]); used = 0; }
+    if (!pages[pages.length - 1].length && pages.length > 1 && b.h <= 20) return;  // não começa página com divisória/espaço
+    pages[pages.length - 1].push(b); used += b.h;
+  });
+  // desenha cada página (re-cria o layout no contexto real para manter as funções)
+  return pages.map((pg, pi) => {
+    const head = pi === 0 ? HEAD1 : HEADN;
+    const h = head + pg.reduce((s, b) => s + b.h, 0) + 20 + FOOT;
+    const c = document.createElement('canvas'); c.width = W; c.height = h;
+    const ctx = c.getContext('2d');
+    const L = makeLayout(ctx, r);
+    const idx = pg.map(b => blocks.indexOf(b));
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, h);
+    // cabeçalho
+    ctx.fillStyle = C.head; ctx.fillRect(0, 0, W, head - 30);
+    if (pi === 0) {
+      L.font(600, 28); L.T('RELATÓRIO DE PLANTÃO', M, 68, '#cfe7df');
+      L.font(800, 68); L.T(r.paciente, M, 150, '#fff');
+      L.font(500, 32); L.T(r.dataTxt || '', M, 204, '#e3f2ed');
+      L.T(`Turno ${String(r.turno).toLowerCase()} · das ${fmtHora(r.inicio)} às ${fmtHora(r.fim)}`, M, 252, '#e3f2ed');
+      L.T(`Cuidadora: ${r.cuidadora}`, M, 300, '#e3f2ed');
+    } else {
+      L.font(700, 32); L.T(`Relatório de Plantão · ${r.paciente} · ${r.dataCurta || ''}`, M, 62, '#fff');
+      L.font(500, 26); L.T(`Turno ${String(r.turno).toLowerCase()} · ${r.cuidadora} · continuação`, M, 96, '#d6ebe4');
+    }
+    let y = head - 20;
+    idx.forEach(i => { L.blocks[i].draw(y); y += L.blocks[i].h; });
+    // rodapé
+    ctx.fillStyle = C.line; ctx.fillRect(M, h - FOOT + 10, CW, 2);
+    L.font(400, 24);
+    const pgTxt = pages.length > 1 ? `Página ${pi + 1} de ${pages.length} · ` : '';
+    L.T(`${pgTxt}Gerado em ${r.gerado}`, W / 2, h - 34, C.muted, 'center');
+    return c;
+  });
+}
+const paraBlob = c => new Promise((res, rej) => {
+  try { c.toBlob(b => b ? res(b) : rej(new Error('falha ao gerar imagem')), 'image/png'); } catch (e) { rej(e); }
+});
+
+/* Diálogo próprio (confirm() é bloqueado em alguns navegadores e visualizadores) */
+function perguntar(msg, sim = 'Sim', nao = 'Cancelar') {
+  return new Promise(res => {
+    $('dlgMsg').textContent = msg; $('dlgSim').textContent = sim; $('dlgNao').textContent = nao;
+    const d = $('dlg'); d.hidden = false;
+    const fim = v => { d.hidden = true; $('dlgSim').onclick = $('dlgNao').onclick = null; res(v); };
+    $('dlgSim').onclick = () => fim(true); $('dlgNao').onclick = () => fim(false);
+  });
+}
+
+/* ---------- Fila de envio para a planilha (funciona sem internet) ---------- */
+const FILA = 'plantao-fila-v1', PEND = 'plantao-aguardando-v1';
+let filaMem = [], enviando = false;
+function lerFila() { try { return JSON.parse(localStorage.getItem(FILA) || '[]'); } catch (e) { return filaMem; } }
+function gravarFila(f) { filaMem = f; try { localStorage.setItem(FILA, JSON.stringify(f)); } catch (e) {} }
+function novoId() {
+  try { return crypto.randomUUID(); } catch (e) { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+}
+function montarRegistro(r) {
+  const oc = {}; r.ocorr.forEach(o => oc[o.nome] = o.v || '');
+  return {
+    id: novoId(), enviadoEm: new Date().toISOString(),
+    data: r.data, paciente: r.paciente, turno: r.turno, inicio: r.inicio || '', fim: r.fim || '',
+    cuidadora: r.cuidadora, passado: r.passado || '',
+    quedas: oc['Quedas'], dor: oc['Dor'], alteracoes: oc['Alterações'], beber: oc['Saiu para beber'] || '', comentarios: r.comentarios || '',
+    vitais: r.vitais, banheiro: r.banheiro,
+    remedios: r.remedios.map(({ nome, hora, tomou, motivo }) => ({ nome, hora, tomou, motivo })),
+    refeicoes: r.refeicoes.map(({ nome, hora, aceit, desc }) => ({ nome, hora, aceit, desc })),
+  };
+}
+async function enviarFila() {
+  if (!PLANILHA_URL || enviando) return lerFila().length;
+  enviando = true;
+  try {
+    for (const reg of lerFila()) {
+      const resp = await fetch(PLANILHA_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(reg),
+      });
+      const j = await resp.json();
+      if (!j.ok) throw new Error(j.erro || 'resposta inválida');
+      gravarFila(lerFila().filter(x => x.id !== reg.id));
+    }
+  } catch (e) {
+    console.warn('Envio para a planilha falhou, tentará de novo:', e);
+  } finally { enviando = false; atualizarStatusFila(); }
+  return lerFila().length;
+}
+function atualizarStatusFila() {
+  const n = PLANILHA_URL ? lerFila().length : 0, el = $('filaStatus');
+  el.hidden = !n;
+  if (n) $('filaTxt').textContent = n === 1 ? '1 relatório aguardando envio para a planilha.' : `${n} relatórios aguardando envio para a planilha.`;
+}
+$('filaBtn').onclick = () => { $('filaTxt').textContent = 'Enviando…'; enviarFila(); };
+window.addEventListener('online', enviarFila);
+setInterval(() => { if (lerFila().length) enviarFila(); }, 60000);
+
+/* ---------- Trava: só libera o formulário depois de confirmar o envio ---------- */
+function travaEstado(qual) { ['travaPergunta', 'travaSalvando', 'travaFim'].forEach(id => $(id).hidden = id !== qual); }
+function pedirConfirmacao() {
+  try { localStorage.setItem(PEND, '1'); } catch (e) {}
+  travaEstado('travaPergunta'); $('trava').hidden = false;
+}
+function soltarTrava() { try { localStorage.removeItem(PEND); } catch (e) {} $('trava').hidden = true; }
+$('travaNao').onclick = soltarTrava;
+$('travaSim').onclick = async () => {
+  const r = preparar();
+  gravarFila([...lerFila(), montarRegistro(r)]);
+  lembrarRemedios(r.paciente, r._rawRemedios);
+  limpar();
+  try { localStorage.removeItem(PEND); } catch (e) {}
+  let msg = 'Formulário liberado para o próximo plantão.';
+  if (PLANILHA_URL) {
+    travaEstado('travaSalvando');
+    const pendentes = await enviarFila();
+    msg = pendentes
+      ? 'Sem conexão com a planilha agora. O relatório ficou guardado neste celular e será enviado sozinho quando houver internet. O formulário já está liberado.'
+      : 'Relatório salvo na planilha. Formulário liberado para o próximo plantão.';
+  }
+  $('travaFimMsg').textContent = msg; travaEstado('travaFim');
+};
+$('travaOk').onclick = soltarTrava;
+
+/* ---------- Compartilhar / prévia ---------- */
+function abrirPrevia(canv, aviso, manual) {
+  // data: URL funciona mesmo onde blob: é bloqueado
+  $('previaImgs').innerHTML =
+    (aviso ? `<p class="aviso">${esc(aviso)}</p>` : '') +
+    canv.map((c, i) => `<img src="${c.toDataURL('image/png')}" alt="Página ${i + 1}">`).join('');
+  const b = $('sharePrevia');
+  b.dataset.manual = manual ? '1' : '';
+  b.textContent = manual ? 'Já enviei no WhatsApp' : 'Compartilhar no WhatsApp';
+  const m = $('previa'); m.hidden = false; m.scrollTop = 0;
+}
+const AVISO_MANUAL = 'Este navegador não abre o menu de compartilhar. Toque e segure (ou clique com o botão direito) em cada imagem para salvar ou copiar, envie no WhatsApp e depois toque em "Já enviei no WhatsApp".';
+async function compartilhar(btn) {
+  const r = preparar(); if (!validar(r)) return;
+  btn.disabled = true;
+  try {
+    const canv = gerarPaginas(r);
+    const base = `plantao-${r.paciente.toLowerCase()}-${r.data}-${String(r.turno).toLowerCase()}`;
+    const files = await Promise.all(canv.map(async (c, i) =>
+      new File([await paraBlob(c)], `${base}${canv.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })));
+    let pode = false;
+    try { pode = !!(navigator.share && navigator.canShare && navigator.canShare({ files })); } catch (e) {}
+    if (!pode) { abrirPrevia(canv, AVISO_MANUAL, true); return; }
+    try { await navigator.share({ files }); }
+    catch (e) {
+      if (e.name === 'AbortError') return;            // fechou o menu sem escolher
+      abrirPrevia(canv, AVISO_MANUAL, true); return;
+    }
+    $('previa').hidden = true;
+    pedirConfirmacao();
+  } catch (e) {
+    toast('Erro ao gerar o relatório: ' + e.message);
+  } finally { btn.disabled = false; }
+}
+function mostrarPrevia() {
+  const r = preparar(); if (!validar(r)) return;
+  try { abrirPrevia(gerarPaginas(r)); }
+  catch (e) { toast('Erro ao gerar a prévia: ' + e.message); }
+}
+$('btnShare').onclick = e => compartilhar(e.currentTarget);
+$('sharePrevia').onclick = e => {
+  if (e.currentTarget.dataset.manual) { $('previa').hidden = true; pedirConfirmacao(); }
+  else compartilhar(e.currentTarget);
+};
+$('btnPrevia').onclick = mostrarPrevia;
+$('fecharPrevia').onclick = () => $('previa').hidden = true;
+$('btnLimpar').onclick = async () => { if (await perguntar('Apagar tudo o que foi preenchido?', 'Apagar')) limpar(); };
+
+/* ---------- Tela de abertura ---------- */
+function resumoRascunho() {
+  const d = coletar(), c = d.campos;
+  const refs = REFEICOES.some(([k]) => c[`ref_${k}_aceit`] && c[`ref_${k}_aceit`] !== 'Não ofertado');
+  const tem = c.paciente || c.cuidadora || c.turno || c.inicio || c.fim || c.comentarios || refs
+    || d.vitais.length || d.banheiro.length || d.remedios.length || OCORRENCIAS.some(([k]) => c[`oc_${k}`]);
+  if (!tem) return '';
+  const cuid = c.cuidadora === 'Outra' ? c.cuidadora_outra : c.cuidadora;
+  const data = c.data ? c.data.split('-').reverse().join('/') : '';
+  return [c.paciente, cuid, data].filter(Boolean).join(' · ') || 'preenchido pela metade';
+}
+function mostrarAbertura() {
+  const r = resumoRascunho();
+  $('abContinuarWrap').hidden = !r;
+  $('abResumo').textContent = r;
+  $('abertura').hidden = false;
+}
+$('abNovo').onclick = async () => {
+  if (resumoRascunho() && !(await perguntar('Isso apaga o formulário que estava em andamento. Começar um novo?', 'Apagar e começar', 'Voltar'))) return;
+  limpar(); $('abertura').hidden = true; window.scrollTo(0, 0);
+};
+$('abContinuar').onclick = () => { $('abertura').hidden = true; };
+
+restaurar();
+atualizarStatusFila();
+enviarFila();
+// Se o navegador recarregou a página enquanto a cuidadora estava no WhatsApp, a trava volta;
+// senão, mostra a tela de abertura
+let _pend = false; try { _pend = !!localStorage.getItem(PEND); } catch (e) {}
+if (_pend) pedirConfirmacao(); else mostrarAbertura();
+</script>
+</body>
+</html>
