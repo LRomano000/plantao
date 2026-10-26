@@ -807,9 +807,10 @@ function gravarFila(f) { filaMem = f; try { localStorage.setItem(FILA, JSON.stri
 function novoId() {
   try { return crypto.randomUUID(); } catch (e) { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
 }
-function montarRegistro(r) {
+function montarRegistro(r, origem) {
   const oc = {}; r.ocorr.forEach(o => oc[o.nome] = o.v || '');
   return {
+    tipo: 'relatorio', origem,
     id: novoId(), enviadoEm: new Date().toISOString(),
     data: r.data, paciente: r.paciente, turno: r.turno, inicio: r.inicio || '', fim: r.fim || '',
     cuidadora: r.cuidadora, passado: r.passado || '',
@@ -819,30 +820,60 @@ function montarRegistro(r) {
     refeicoes: r.refeicoes.map(({ nome, hora, aceit, desc }) => ({ nome, hora, aceit, desc })),
   };
 }
+/* Texto legível com tudo o que está preenchido, para a coluna Conteúdo da aba Logs */
+function resumoConteudo(r) {
+  const L = [];
+  const cab = [r.paciente && `Paciente: ${r.paciente}`, r.data && `Data: ${r.dataCurta}`, r.turno && `Turno: ${r.turno}`,
+    (r.inicio || r.fim) && `Horário: ${r.inicio || '?'} às ${r.fim || '?'}`, r.passado && `Passado para: ${r.passado}`].filter(Boolean);
+  if (cab.length) L.push(cab.join(' | '));
+  if (r.vitais.length) L.push('PA/FC: ' + r.vitais.map(v => `${v.hora || '--:--'} ${v.pas || '?'}x${v.pad || '?'} FC ${v.fc || '?'}`).join('; '));
+  if (r.banheiro.length) L.push('Banheiro: ' + r.banheiro.map(b => `${b.hora || '--:--'} ${[b.u && 'urinou', b.e && 'evacuou'].filter(Boolean).join(' e ') || '-'}`).join('; '));
+  if (r.remedios.length) L.push('Remédios: ' + r.remedios.map(m => `${m.hora || '--:--'} ${m.nome || '(sem nome)'} (${m.tomou || 'não marcado'}${m.motivo ? ': ' + m.motivo : ''})`).join('; '));
+  if (r.refeicoes.length) L.push('Refeições: ' + r.refeicoes.map(m => `${m.nome} ${m.hora || '--:--'} ${m.aceit}${m.desc ? ' - ' + m.desc : ''}`).join('; '));
+  const oc = r.ocorr.filter(o => o.v).map(o => `${o.nome}: ${o.v}`);
+  if (oc.length) L.push('Ocorrências: ' + oc.join(', '));
+  if (r.comentarios) L.push('Comentários: ' + r.comentarios);
+  return L.join('\n') || '(formulário vazio)';
+}
+/* Registra uma ação na aba Logs (vai pela mesma fila, então funciona sem internet) */
+function registrar(acao) {
+  if (!PLANILHA_URL) return;
+  let r = null; try { r = preparar(); } catch (e) {}
+  gravarFila([...lerFila(), {
+    tipo: 'log', id: novoId(), quando: new Date().toISOString(), acao,
+    cuidadora: r?.cuidadora || '', paciente: r?.paciente || '', conteudo: r ? resumoConteudo(r) : '',
+  }]);
+  enviarFila();
+}
+const relatoriosPendentes = () => lerFila().filter(x => x.tipo !== 'log').length;
 async function enviarFila() {
-  if (!PLANILHA_URL || enviando) return lerFila().length;
+  if (!PLANILHA_URL || enviando) return relatoriosPendentes();
   enviando = true;
   try {
-    for (const reg of lerFila()) {
+    let reg;
+    while ((reg = lerFila()[0])) {      // relê a fila: itens que chegam durante o envio também vão
       const resp = await fetch(PLANILHA_URL, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(reg),
       });
       const j = await resp.json();
-      if (!j.ok) throw new Error(j.erro || 'resposta inválida');
+      // O servidor respondeu: se recusou (ex.: script desatualizado), descarta esse item
+      // para não travar a fila; falta de internet cai no catch e tenta de novo depois.
+      if (!j.ok) console.warn('Planilha recusou o envio:', j.erro, reg);
       gravarFila(lerFila().filter(x => x.id !== reg.id));
     }
   } catch (e) {
     console.warn('Envio para a planilha falhou, tentará de novo:', e);
   } finally { enviando = false; atualizarStatusFila(); }
-  return lerFila().length;
+  return relatoriosPendentes();
 }
 function atualizarStatusFila() {
-  const n = PLANILHA_URL ? lerFila().length : 0, el = $('filaStatus');
+  const n = PLANILHA_URL ? relatoriosPendentes() : 0, el = $('filaStatus');
   el.hidden = !n;
   if (n) $('filaTxt').textContent = n === 1 ? '1 relatório aguardando envio para a planilha.' : `${n} relatórios aguardando envio para a planilha.`;
 }
 $('filaBtn').onclick = () => { $('filaTxt').textContent = 'Enviando…'; enviarFila(); };
 window.addEventListener('online', enviarFila);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && lerFila().length) enviarFila(); });
 setInterval(() => { if (lerFila().length) enviarFila(); }, 60000);
 
 /* ---------- Trava: só libera o formulário depois de confirmar o envio ---------- */
@@ -852,10 +883,11 @@ function pedirConfirmacao() {
   travaEstado('travaPergunta'); $('trava').hidden = false;
 }
 function soltarTrava() { try { localStorage.removeItem(PEND); } catch (e) {} $('trava').hidden = true; }
-$('travaNao').onclick = soltarTrava;
+$('travaNao').onclick = () => { registrar('Pergunta final: Não, voltar ao formulário'); soltarTrava(); };
 $('travaSim').onclick = async () => {
+  registrar('Pergunta final: Sim, foi enviado');
   const r = preparar();
-  gravarFila([...lerFila(), montarRegistro(r)]);
+  gravarFila([...lerFila(), montarRegistro(r, 'Confirmação de envio')]);
   lembrarRemedios(r.paciente, r._rawRemedios);
   limpar();
   try { localStorage.removeItem(PEND); } catch (e) {}
@@ -884,7 +916,10 @@ function abrirPrevia(canv, aviso, manual) {
 }
 const AVISO_MANUAL = 'Este navegador não abre o menu de compartilhar. Toque e segure (ou clique com o botão direito) em cada imagem para salvar ou copiar, envie no WhatsApp e depois toque em "Já enviei no WhatsApp".';
 async function compartilhar(btn) {
+  registrar('Clicou em Compartilhar no WhatsApp');
   const r = preparar(); if (!validar(r)) return;
+  // Grava na planilha já no clique, mesmo que ela não chegue a compartilhar
+  if (PLANILHA_URL) { gravarFila([...lerFila(), montarRegistro(r, 'Compartilhar')]); enviarFila(); }
   btn.disabled = true;
   try {
     const canv = gerarPaginas(r);
@@ -906,18 +941,23 @@ async function compartilhar(btn) {
   } finally { btn.disabled = false; }
 }
 function mostrarPrevia() {
+  registrar('Clicou em Prévia');
   const r = preparar(); if (!validar(r)) return;
   try { abrirPrevia(gerarPaginas(r)); }
   catch (e) { toast('Erro ao gerar a prévia: ' + e.message); }
 }
 $('btnShare').onclick = e => compartilhar(e.currentTarget);
 $('sharePrevia').onclick = e => {
-  if (e.currentTarget.dataset.manual) { $('previa').hidden = true; pedirConfirmacao(); }
+  if (e.currentTarget.dataset.manual) { registrar('Clicou em Já enviei no WhatsApp'); $('previa').hidden = true; pedirConfirmacao(); }
   else compartilhar(e.currentTarget);
 };
 $('btnPrevia').onclick = mostrarPrevia;
-$('fecharPrevia').onclick = () => $('previa').hidden = true;
-$('btnLimpar').onclick = async () => { if (await perguntar('Apagar tudo o que foi preenchido?', 'Apagar')) limpar(); };
+$('fecharPrevia').onclick = () => { registrar('Prévia: clicou em Voltar'); $('previa').hidden = true; };
+$('btnLimpar').onclick = async () => {
+  const ok = await perguntar('Apagar tudo o que foi preenchido?', 'Apagar');
+  registrar(ok ? 'Limpar formulário: Apagou' : 'Limpar formulário: Cancelou');   // registra antes de apagar, com o conteúdo
+  if (ok) limpar();
+};
 
 /* ---------- Tela de abertura ---------- */
 function resumoRascunho() {
@@ -937,7 +977,11 @@ function mostrarAbertura() {
   $('abertura').hidden = false;
 }
 $('abNovo').onclick = async () => {
-  if (resumoRascunho() && !(await perguntar('Isso apaga o formulário que estava em andamento. Começar um novo?', 'Apagar e começar', 'Voltar'))) return;
+  if (resumoRascunho()) {
+    const ok = await perguntar('Isso apaga o formulário que estava em andamento. Começar um novo?', 'Apagar e começar', 'Voltar');
+    registrar(ok ? 'Começar novo formulário: Apagou o anterior' : 'Começar novo formulário: Voltou');
+    if (!ok) return;
+  }
   limpar(); $('abertura').hidden = true; window.scrollTo(0, 0);
 };
 $('abContinuar').onclick = () => { $('abertura').hidden = true; };

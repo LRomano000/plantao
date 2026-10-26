@@ -30,7 +30,14 @@ Para mudar o site, edite o `index.html` e faça o commit. O GitHub Pages atualiz
 
 ## Planilha
 
-A planilha tem uma aba para cada tipo de registro: Plantões, Sinais, Banheiro, Remédios e Refeições. Todas as linhas do mesmo plantão têm o mesmo **ID**. Não renomeie as abas nem mude a ordem das colunas, porque o script grava pela posição.
+A planilha tem uma aba para cada tipo de registro: Plantões, Sinais, Banheiro, Remédios e Refeições. Todas as linhas do mesmo envio têm o mesmo **ID**.
+
+O relatório é gravado em dois momentos, indicados na coluna **Origem**:
+
+- **Compartilhar**: a cada toque em "Compartilhar no WhatsApp", mesmo que ela não chegue a enviar. Vários toques geram várias gravações.
+- **Confirmação de envio**: quando ela responde "Sim, foi enviado" no fim do fluxo.
+
+A aba **Logs** registra cada ação na tela, com data e hora, cuidadora, paciente e o conteúdo preenchido naquele momento: Prévia (e Voltar), Limpar formulário (Apagou ou Cancelou), Começar novo formulário, Compartilhar no WhatsApp, Já enviei no WhatsApp e a resposta da pergunta final. Não renomeie as abas nem mude a ordem das colunas, porque o script grava pela posição.
 
 ### Publicar o script de novo depois de uma alteração
 
